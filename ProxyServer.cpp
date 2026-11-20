@@ -3,7 +3,7 @@
 
 
 // Define them here !!!
-const char* pathHTTPS = "C:\\BotServiceLogs\\SERVER_PORT_8200";
+const char* pathHTTPS = "SERVER_PORT_8200";
 const char* fileNameHTTPS = "REPORT_HTTPS.txt";
 
 

@@ -1,8 +1,8 @@
-#include "WindowsService.h"
+﻿#include "WindowsService.h"
 
 
 // Define them here !!!
-const char* path = "C:\\BotServiceLogs\\SERVER_PORT_8200";
+const char* path = "SERVER_PORT_8200";
 const char* fileName = "REPORT_SERVICE.txt";
 
 

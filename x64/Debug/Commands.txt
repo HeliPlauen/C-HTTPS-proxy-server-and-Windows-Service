@@ -1,0 +1,12 @@
+USING SC 
+1. sc create WinServ binPath="F:\AAA_E_DRIVE_EVACUATION\A_OLEG\PROGRAMING\BOT-13Y-SUNSHINE_SOCKETIOCLI\HTTPS_SERVER_SERVICE_PORT_30\exe\WinServiceHttpsPROXYserver.exe"
+2. sc start WinServ
+3. sc stop WinServ
+4. sc delete WinServ
+
+USING CMD COMMANDS
+1. cd F:\AAA_E_DRIVE_EVACUATION\A_OLEG\PROGRAMING\BOT-13Y-SUNSHINE_SOCKETIOCLI\HTTPS_SERVER_SERVICE_PORT_30\exe
+2. WinServiceHttpsPROXYserver.exe install
+3. WinServiceHttpsPROXYserver.exe start
+4. WinServiceHttpsPROXYserver.exe stop
+5. WinServiceHttpsPROXYserver.exe uninstall

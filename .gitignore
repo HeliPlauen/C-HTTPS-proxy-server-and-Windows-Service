@@ -33,7 +33,6 @@
 *.lib
 
 # Executables
-*.exe
 *.out
 *.app
 
@@ -69,3 +68,4 @@ Testing/
 # MINE
 .vs
 WinServi.*/
+SERVER_PORT_8200/
