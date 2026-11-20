@@ -66,6 +66,8 @@ Testing/
 .cache/
 
 # MINE
-.vs
+.vs/
 WinServi.*/
 SERVER_PORT_8200/
+x64/
+x86/

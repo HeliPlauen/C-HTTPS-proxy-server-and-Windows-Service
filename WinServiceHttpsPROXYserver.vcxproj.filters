@@ -19,6 +19,9 @@
     <Filter Include="ssl">
       <UniqueIdentifier>{472b333d-ad11-4278-98e2-48f134fbf3e9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="test">
+      <UniqueIdentifier>{aa618d2c-d395-4e95-8d46-d1cf7462babb}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -72,6 +75,18 @@
     </None>
     <None Include="ssl\server.pem">
       <Filter>ssl</Filter>
+    </None>
+    <None Include=".gitignore">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="test\Server.exe">
+      <Filter>test</Filter>
+    </None>
+    <None Include="test\libcrypto-3-x64.dll">
+      <Filter>test</Filter>
+    </None>
+    <None Include="test\libssl-3-x64.dll">
+      <Filter>test</Filter>
     </None>
   </ItemGroup>
 </Project>
