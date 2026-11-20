@@ -1,4 +1,4 @@
-#include "ProxyServer.h"
+﻿#include "ProxyServer.h"
 #include "IniParcer.h"
 
 
@@ -14,7 +14,7 @@ ProxyServer::ProxyServer() {
     this->targetServerPort = parcer.Run();
     std::cout << "Target server port: " << this->targetServerPort << std::endl;
 
-    this->proxyServerPort = this->targetServerPort + 900;
+    this->proxyServerPort = this->targetServerPort + 1170;
     std::cout << "Access port: " << this->proxyServerPort << std::endl;
 };
 
