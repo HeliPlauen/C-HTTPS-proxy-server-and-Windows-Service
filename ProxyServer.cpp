@@ -67,34 +67,26 @@ ProxyServer::~ProxyServer() {
 };
 
 
-std::string ProxyServer::strSendGetRequest(SOCKET targetSocket, const std::string method, const std::string& path) {
-    int bytesReceived;
+std::string ProxyServer::strSendGetRequest(SSL* targetSsl, const std::string method, const std::string& path) {
+    int bytesReceived = 0;
     std::string httpRequest;
     std::string httpResponse;
     char buffer[BUFFER_SIZE];
     std::string mess;
-
+    
     httpRequest =
-        httpRequest =
         method + " " + path + " HTTP/1.1\r\n"
-        "Host: " + this->targetServerHost + ":" + std::to_string(this->targetServerPort) + "\r\n"        
-        //"Content-Type: application/x-www-form-urlencoded\r\n\r\n"
-        "Content-Type: text/html\r\n"
+        "Host: " + this->targetServerHost + ":" + std::to_string(this->targetServerPort) + "\r\n"
         "Connection: close\r\n\r\n";
 
-    this->WriteReportIntoFile(pathHTTPS, fileNameHTTPS, httpRequest.c_str());
+    SSL_write(targetSsl, httpRequest.c_str(), static_cast<int>(httpRequest.length())); 
 
-    send(targetSocket, httpRequest.c_str(), static_cast<int>(httpRequest.length()), 0);
-
-    mess = "WE HAVE SENT GET-REQUEST TO THE TARGET SERVER: \n" + httpRequest + this->GetCurrentDateTime();
+    mess = "WE HAVE SENT POST-REQUEST TO THE TARGET SERVER: \n" + httpRequest + this->GetCurrentDateTime();
     this->WriteReportIntoFile(pathHTTPS, fileNameHTTPS, mess.c_str());
-
-    // Add a small delay
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
-
-    // Receive the response from the target server
-    bytesReceived = recv(targetSocket, buffer, BUFFER_SIZE, 0);
-    httpResponse = std::string(buffer, bytesReceived);
+    
+    while ((bytesReceived = SSL_read(targetSsl, buffer, BUFFER_SIZE - 1)) > 0) {
+        httpResponse.append(buffer, bytesReceived);
+    }
 
     mess = "WE HAVE RECEIVED FROM THE TARGET SERVER: \n" + httpResponse + this->GetCurrentDateTime();
     this->WriteReportIntoFile(pathHTTPS, fileNameHTTPS, mess.c_str());
@@ -103,7 +95,7 @@ std::string ProxyServer::strSendGetRequest(SOCKET targetSocket, const std::strin
 }
 
 
-std::string ProxyServer::strSendPostRequest(SOCKET targetSocket, const std::string method, const std::string& path, const std::string& body) {
+std::string ProxyServer::strSendPostRequest(SSL* targetSsl, const std::string method, const std::string& path, const std::string& body) {
     int bytesReceived;
     std::string httpRequest;
     std::string httpResponse;
@@ -118,7 +110,7 @@ std::string ProxyServer::strSendPostRequest(SOCKET targetSocket, const std::stri
         "\r\n" + body + 
         "Connection: close\r\n\r\n";
 
-    send(targetSocket, httpRequest.c_str(), static_cast<int>(httpRequest.length()), 0);
+    SSL_write(targetSsl, httpRequest.c_str(), static_cast<int>(httpRequest.length()));
 
     mess = "WE HAVE SENT POST-REQUEST TO THE TARGET SERVER: \n" + httpRequest + this->GetCurrentDateTime();
     this->WriteReportIntoFile(pathHTTPS, fileNameHTTPS, mess.c_str());
@@ -127,8 +119,9 @@ std::string ProxyServer::strSendPostRequest(SOCKET targetSocket, const std::stri
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
     // Receive the response from the target server
-    bytesReceived = recv(targetSocket, buffer, BUFFER_SIZE, 0);
-    httpResponse = std::string(buffer, bytesReceived);
+    while ((bytesReceived = SSL_read(targetSsl, buffer, BUFFER_SIZE - 1)) > 0) {
+        httpResponse.append(buffer, bytesReceived);
+    }
 
     mess = "WE HAVE RECEIVED FROM THE TARGET SERVER: \n" + httpResponse + this->GetCurrentDateTime();
     this->WriteReportIntoFile(pathHTTPS, fileNameHTTPS, mess.c_str());
@@ -137,7 +130,7 @@ std::string ProxyServer::strSendPostRequest(SOCKET targetSocket, const std::stri
 }
 
 
-std::string ProxyServer::strSendPutRequest(SOCKET targetSocket, const std::string method, const std::string& path, const std::string& body) {
+std::string ProxyServer::strSendPutRequest(SSL* targetSsl, const std::string method, const std::string& path, const std::string& body) {
     int bytesReceived;
     std::string httpRequest;
     std::string httpResponse;
@@ -152,7 +145,7 @@ std::string ProxyServer::strSendPutRequest(SOCKET targetSocket, const std::strin
         "\r\n" + body +
         "Connection: close\r\n\r\n";
 
-    send(targetSocket, httpRequest.c_str(), static_cast<int>(httpRequest.length()), 0);
+    SSL_write(targetSsl, httpRequest.c_str(), static_cast<int>(httpRequest.length()));
 
     mess = "WE HAVE SENT PUT-REQUEST TO THE TARGET SERVER: \n" + httpRequest + this->GetCurrentDateTime();
     this->WriteReportIntoFile(pathHTTPS, fileNameHTTPS, mess.c_str());
@@ -161,8 +154,9 @@ std::string ProxyServer::strSendPutRequest(SOCKET targetSocket, const std::strin
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
     // Receive the response from the target server
-    bytesReceived = recv(targetSocket, buffer, BUFFER_SIZE, 0);
-    httpResponse = std::string(buffer, bytesReceived);
+    while ((bytesReceived = SSL_read(targetSsl, buffer, BUFFER_SIZE - 1)) > 0) {
+        httpResponse.append(buffer, bytesReceived);
+    }
 
     mess = "WE HAVE RECEIVED FROM THE TARGET SERVER: \n" + httpResponse + this->GetCurrentDateTime();
     this->WriteReportIntoFile(pathHTTPS, fileNameHTTPS, mess.c_str());
@@ -174,72 +168,58 @@ std::string ProxyServer::strSendPutRequest(SOCKET targetSocket, const std::strin
 // Function to send an HTTP request to the target server and receive the response
 std::string ProxyServer::strForwardRequestToTargetServer(const std::string& method, const std::string& path, const std::string& body) {
     SOCKET targetSocket;
-    struct sockaddr_in targetAddr;
+    struct sockaddr_in targetAddr {}; // Обов'язково обнуляємо структуру!
     std::string httpResponse;
 
-    int res = 0;
-    std::string err_mess;
-
-    // Create a socket to connect to the target server
     if ((targetSocket = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
         std::string err_mess = "Socket creation failed: " + std::to_string(WSAGetLastError());
         this->WriteReportIntoFile(pathHTTPS, fileErrNameHTTPS, err_mess.c_str());
-
         return "";
     }
 
+    // 1. СПОЧАТКУ заповнюємо адресу і порт!
     targetAddr.sin_family = AF_INET;
     targetAddr.sin_port = htons(this->targetServerPort);
 
-    const char* url = this->targetServerHost.c_str();
-    inet_pton(AF_INET, url, &targetAddr.sin_addr);
+    if (inet_pton(AF_INET, this->targetServerHost.c_str(), &targetAddr.sin_addr) <= 0) {
+        this->WriteReportIntoFile(pathHTTPS, fileErrNameHTTPS, "Invalid target IP address");
+        closesocket(targetSocket);
+        return "";
+    }
 
-    // 1. Створюємо клієнтський SSL-контекст (можна зробити один раз при старті проксі)
+    // 2. ПОТІМ викликаємо connect()
+    if (connect(targetSocket, (struct sockaddr*)&targetAddr, sizeof(targetAddr)) < 0) {
+        std::string err_mess = "Connection to target server failed: " + std::to_string(WSAGetLastError());
+        this->WriteReportIntoFile(pathHTTPS, fileErrNameHTTPS, err_mess.c_str());
+        closesocket(targetSocket);
+        return "";
+    }
+
+    // 3. Встановлюємо TLS-з'єднання поверх підключеного сокета
     SSL_CTX* clientCtx = SSL_CTX_new(TLS_client_method());
-    SSL_CTX_set_verify(clientCtx, SSL_VERIFY_NONE, nullptr); // Ігноруємо самопідписаний сертифікат сервера
+    SSL_CTX_set_verify(clientCtx, SSL_VERIFY_NONE, nullptr);
 
-    // 2. Підключаємо SSL до вже відкритого сокета targetSocket
     SSL* targetSsl = SSL_new(clientCtx);
     SSL_set_fd(targetSsl, static_cast<int>(targetSocket));
 
     if (SSL_connect(targetSsl) <= 0) {
-
-        // Помилка TLS handshake із сервером 8888
+        this->WriteReportIntoFile(pathHTTPS, fileNameHTTPS, "SSL-error.");
         ERR_print_errors_fp(stderr);
         SSL_free(targetSsl);
         SSL_CTX_free(clientCtx);
-
         closesocket(targetSocket);
         return "";
     }
 
-    // !!!
-    // Connect to the target server
-    res = connect(targetSocket, (struct sockaddr*)&targetAddr, sizeof(targetAddr));
-    if (res < 0) {
-        err_mess = "Connection to target server failed: " + std::to_string(WSAGetLastError());
-        this->WriteReportIntoFile(pathHTTPS, fileErrNameHTTPS, err_mess.c_str());
-
-        err_mess = "[" + this->targetServerHost + "]";
-        this->WriteReportIntoFile(pathHTTPS, fileErrNameHTTPS, err_mess.c_str());
-
-        err_mess = "[" + std::to_string(this->targetServerPort) + " " + typeid(this->targetServerPort).name() + "]";
-        this->WriteReportIntoFile(pathHTTPS, fileErrNameHTTPS, err_mess.c_str());
-
-        closesocket(targetSocket);
-        return "";
-    }
-
+    // 4. Передаємо targetSsl (не targetSocket!) у методи відправки
     if (method == "GET") {
-        this->WriteReportIntoFile(pathHTTPS, fileNameHTTPS, "HERE-5");
-
-        httpResponse = this->strSendGetRequest(targetSocket, method, path);
+        httpResponse = this->strSendGetRequest(targetSsl, method, path);
     }
     else if (method == "POST") {
-        httpResponse = this->strSendPostRequest(targetSocket, method, path, body);
+        httpResponse = this->strSendPostRequest(targetSsl, method, path, body);
     }
     else if (method == "PUT") {
-        httpResponse = this->strSendPutRequest(targetSocket, method, path, body);
+        httpResponse = this->strSendPutRequest(targetSsl, method, path, body);
     }
     else {
         httpResponse =
@@ -248,11 +228,15 @@ std::string ProxyServer::strForwardRequestToTargetServer(const std::string& meth
             "\r\n";
     }
 
-    // Close the target server connection
+    // 5. Коректно закриваємо SSL-сесію та сокет
+    SSL_shutdown(targetSsl);
+    SSL_free(targetSsl);
+    SSL_CTX_free(clientCtx);
     closesocket(targetSocket);
 
     return httpResponse;
 }
+
 
 
 void ProxyServer::vProcessHttpsRequest(SSL* ssl) {

@@ -42,9 +42,9 @@ public:
 
 	~ProxyServer();
 
-	std::string strSendGetRequest(SOCKET targetSocket, const std::string method, const std::string& path);
-	std::string strSendPostRequest(SOCKET targetSocket, const std::string method, const std::string& path, const std::string& body);
-	std::string strSendPutRequest(SOCKET targetSocket, const std::string method, const std::string& path, const std::string& body);
+	std::string strSendGetRequest(SSL* targetSsl, const std::string method, const std::string& path);
+	std::string strSendPostRequest(SSL* targetSsl, const std::string method, const std::string& path, const std::string& body);
+	std::string strSendPutRequest(SSL* targetSsl, const std::string method, const std::string& path, const std::string& body);
 
 	std::string strForwardRequestToTargetServer(const std::string& method, const std::string& path, const std::string& body);
 	void vProcessHttpsRequest(SSL* ssl);
