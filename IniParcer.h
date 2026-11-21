@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #ifndef INI_PARCER_
 #define INI_PARCER_
@@ -8,6 +8,8 @@
 #include <fstream>
 #include <string>
 #include <map>
+
+#include <utility> 
 
 
 class IniParcer
@@ -20,7 +22,7 @@ public:
 	std::string TrimString(const std::string& str);
 	int ConvertPortIntoInt(const std::string& stringport);
 
-	int Run();
+	std::pair<std::string, int> Run();
 
 private:
 	std::string strPathToIniFile;

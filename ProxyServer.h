@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #ifndef _PROXY_SERVER_
 #define _PROXY_SERVER_
@@ -23,6 +23,7 @@
 #include <ctime>  // Import the ctime library
 
 #pragma comment(lib, "ws2_32.lib")
+#pragma comment(lib, "libssl.lib")
 
 
 #define PROXY_PORT_BY_DEFAULT 443
@@ -37,7 +38,7 @@ class ProxyServer
 {
 public:
 	ProxyServer();
-	ProxyServer(int proxyServerPort, int targetServerPort);
+	ProxyServer(int proxyServerPort, int targetServerPort, std::string targetServerUrl);
 
 	~ProxyServer();
 
@@ -56,7 +57,9 @@ public:
 
 private:
 	int proxyServerPort;
+
 	int targetServerPort;
+	std::string targetServerUrl;
 
 	const std::string iniFilePath = "options.ini";
 };

@@ -11,22 +11,29 @@ ProxyServer::ProxyServer() {
     std::cout << "CONSTRUCTOR PROXY-SERVER-1" << std::endl;
 
     IniParcer parcer = IniParcer(this->iniFilePath);
-    this->targetServerPort = parcer.Run();
+    auto data = parcer.Run();
+
+    this->targetServerUrl = data.first;
+    std::cout << "Target server URL: " << this->targetServerUrl << std::endl;
+
+    this->targetServerPort = data.second;
     std::cout << "Target server port: " << this->targetServerPort << std::endl;
 
-    this->proxyServerPort = this->targetServerPort + 1170;
-    std::cout << "Access port: " << this->proxyServerPort << std::endl;
+    this->proxyServerPort = 8200;
+    std::cout << "Access port: " << this->proxyServerPort << std::endl;    
 };
 
 
-ProxyServer::ProxyServer(int proxyServerPort, int targetServerPort) {
+ProxyServer::ProxyServer(int proxyServerPort, int targetServerPort, std::string targetServerUrl) {
     std::cout << "CONSTRUCTOR PROXY-SERVER-2" << std::endl;
-
-    this->proxyServerPort = proxyServerPort;
+        
     this->targetServerPort = targetServerPort;
+    this->targetServerUrl = targetServerUrl;
+    this->proxyServerPort = proxyServerPort;
 
+    std::cout << "Target server URL: " << this->targetServerUrl << std::endl;
     std::cout << "Access port: " << this->proxyServerPort << std::endl;
-    std::cout << "Target server port: " << this->targetServerPort << std::endl;
+    std::cout << "Target server port: " << this->targetServerPort << std::endl;    
 };
 
 
@@ -47,7 +54,7 @@ std::string ProxyServer::strSendGetRequest(SOCKET targetSocket, const std::strin
         "Host: 127.0.0.1\r\n"
         "Content-Type: application/x-www-form-urlencoded\r\n\r\n";
 
-    send(targetSocket, httpRequest.c_str(), httpRequest.length(), 0);
+    send(targetSocket, httpRequest.c_str(), static_cast<int>(httpRequest.length()), 0);
 
     mess = "WE HAVE SENT GET-REQUEST TO THE TARGET SERVER: \n" + httpRequest + this->GetCurrentDateTime();
     this->WriteReportIntoFile(pathHTTPS, fileNameHTTPS, mess.c_str());
@@ -77,10 +84,10 @@ std::string ProxyServer::strSendPostRequest(SOCKET targetSocket, const std::stri
         "POST " + path + " HTTP/1.1\r\n"
         "Host: 127.0.0.1\r\n"
         "Content-Type: text/html\r\n"
-        "Content-Length: " + std::to_string(body.length()) + "\r\n"
+        "Content-Length: " + std::to_string(static_cast<int>(body.length())) + "\r\n"
         "\r\n" + body;
 
-    send(targetSocket, httpRequest.c_str(), httpRequest.length(), 0);
+    send(targetSocket, httpRequest.c_str(), static_cast<int>(httpRequest.length()), 0);
 
     mess = "WE HAVE SENT POST-REQUEST TO THE TARGET SERVER: \n" + httpRequest + this->GetCurrentDateTime();
     this->WriteReportIntoFile(pathHTTPS, fileNameHTTPS, mess.c_str());
@@ -110,10 +117,10 @@ std::string ProxyServer::strSendPutRequest(SOCKET targetSocket, const std::strin
         "PUT " + path + " HTTP/1.1\r\n"
         "Host: 127.0.0.1\r\n"
         "Content-Type: text/html\r\n"
-        "Content-Length: " + std::to_string(body.length()) + "\r\n"
+        "Content-Length: " + std::to_string(static_cast<int>(body.length())) + "\r\n"
         "\r\n" + body;
 
-    send(targetSocket, httpRequest.c_str(), httpRequest.length(), 0);
+    send(targetSocket, httpRequest.c_str(), static_cast<int>(httpRequest.length()), 0);
 
     mess = "WE HAVE SENT PUT-REQUEST TO THE TARGET SERVER: \n" + httpRequest + this->GetCurrentDateTime();
     this->WriteReportIntoFile(pathHTTPS, fileNameHTTPS, mess.c_str());
@@ -137,7 +144,6 @@ std::string ProxyServer::strForwardRequestToTargetServer(const std::string& meth
     SOCKET targetSocket;
     struct sockaddr_in targetAddr;
     std::string httpResponse;
-    char buffer[BUFFER_SIZE];
 
     // Create a socket to connect to the target server
     if ((targetSocket = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
@@ -147,7 +153,9 @@ std::string ProxyServer::strForwardRequestToTargetServer(const std::string& meth
 
     targetAddr.sin_family = AF_INET;
     targetAddr.sin_port = htons(this->targetServerPort);
-    inet_pton(AF_INET, "127.0.0.1", &targetAddr.sin_addr);
+
+    const char* url = this->targetServerUrl.c_str();
+    inet_pton(AF_INET, url, &targetAddr.sin_addr);
 
     // Connect to the target server
     if (connect(targetSocket, (struct sockaddr*)&targetAddr, sizeof(targetAddr)) < 0) {
@@ -224,11 +232,11 @@ void ProxyServer::vProcessHttpsRequest(SSL* ssl) {
         std::getline(requestStream, body, '\0');
         body.erase(0, body.find_first_not_of("\r\n"));
 
-        if (body.length() < contentLength) {
+        if (static_cast<int>(body.length()) < contentLength) {
 
             // If the body is incomplete, read the remaining content via SSL_read (handles client case)
             buffer_2 = new char[contentLength + 1];
-            bytesRead = SSL_read(ssl, buffer_2, contentLength - body.length());
+            bytesRead = SSL_read(ssl, buffer_2, contentLength - static_cast<int>(body.length()));
             if (bytesRead > 0) {
                 buffer_2[bytesRead] = '\0';
                 body += std::string(buffer_2);
@@ -250,7 +258,7 @@ void ProxyServer::vProcessHttpsRequest(SSL* ssl) {
     response = this->strForwardRequestToTargetServer(method, path, body);
 
     // Send the response back to the client
-    SSL_write(ssl, response.c_str(), response.length());
+    SSL_write(ssl, response.c_str(), static_cast<int>(response.length()));
 }
 
 

@@ -5,11 +5,11 @@
 - proxy-server works as a Windows service;
 - service name is **WinServ**;
 - created using C++;
-- target server should work on the port taken from options.ini, by default - 7031;
-- should work with a Windows proxy-server, both should run on the port = target server should + 1170;
+- target server URL is in the options.ini file;
+- target server should work on the port taken from options.ini, currently in options.ini file there is 8888, by default - 8889;
+- proxy server always works on the port 8200;
 - SLL certificate and key required, currently uses self-signed certificate;
-- start Windows proxy-server before WinServ service start;
-- both - HTTPS proxy-server and target server should work on localhost (such limits may be solved easilly).
+- both - HTTPS proxy-server and target server work on localhost, but target server may work anywhere.
 
 ---
 
@@ -46,14 +46,13 @@
 
 1. If exe does not exist in 'exe' folder - you have to compile it, and then put it into 'exe' folder.
 2. Be sure that OnenSSL is installed and exists in ths location "C:\Program Files\OpenSSL-Win64\include".
-3. Start Windows proxy server on port: access_port (from options.ini) + 1170 (if accass_port=7030 - Windows proxy port is 8200).
-3a. If WinServ is not installed as a Service - install it (watch chapter II).
-4. Run WinServ (watch chapter II).
+3. If **WinServ** is not installed as a Service - install it (watch chapter II).
+4. Run **WinServ** (watch chapter II).
 
 ---
 
 ## IV. How to test
 
-* run service ising chapter III instructions; 
-* run any server on the port equal to access_port fron options.ini (currentry it is 7300) - you may use Service.exe from test;
-* run cmd-command **curl -k https://127.0.0.1:7030*.
+* run service using chapter III instructions; 
+* run any server on the port equal to access_port fron options.ini (currentry it works on the port 8888) - you may use Service.exe from test;
+* run cmd-command **curl -k https://127.0.0.1:8888*.

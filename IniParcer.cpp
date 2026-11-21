@@ -1,4 +1,6 @@
-#include "IniParcer.h"
+﻿#include "IniParcer.h"
+
+#include <utility>
 
 
 IniParcer::IniParcer(const std::string & iniFilePath) {
@@ -70,8 +72,14 @@ int IniParcer::ConvertPortIntoInt(const std::string& stringport) {
 }
 
 
-int IniParcer::Run() {
+std::pair<std::string, int> IniParcer::Run() {
+    std::string url;
+
     std::string port;
+    int intPort = 0;
+
+    std::string defaultUrl = "127.0.0.1";
+    int defaultPort = 8889;
 
     std::map<std::string, std::string> config = this->ReadIniFile(this->strPathToIniFile);
 
@@ -81,10 +89,13 @@ int IniParcer::Run() {
             throw std::runtime_error("Data was not gotten!");
         }
 
-        return this->ConvertPortIntoInt(port);
+        url = config["Main.target_url"];
+        intPort = this->ConvertPortIntoInt(port);
+
+        return { url, intPort };
     }
     catch (std::runtime_error& ex1) {
         std::cout << "Error: " << ex1.what() << std::endl;
-        return 7031;
+        return { defaultUrl, defaultPort };
     }
 }
