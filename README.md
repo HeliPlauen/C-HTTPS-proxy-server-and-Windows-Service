@@ -55,4 +55,4 @@
 
 * run service using chapter III instructions; 
 * run any server on the port equal to access_port fron options.ini (currentry it works on the port 8888) - you may use Service.exe from test;
-* run cmd-command **curl -k https://127.0.0.1:8888*.
+* run cmd-command **curl -k https://127.0.0.1:8200*.

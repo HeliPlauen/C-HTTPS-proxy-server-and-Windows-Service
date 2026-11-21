@@ -30,6 +30,17 @@ void WINAPI WindowsService::ServiceMain(DWORD argc, LPWSTR* argv) {
     int result;
     std::string message;
 
+    // Set current dir !!!    
+    wchar_t exePath[MAX_PATH];
+    if (GetModuleFileNameW(NULL, exePath, MAX_PATH) > 0) {
+        std::wstring dirPath(exePath);
+        size_t lastSlash = dirPath.find_last_of(L"\\/");
+        if (lastSlash != std::wstring::npos) {
+            dirPath = dirPath.substr(0, lastSlash);
+            SetCurrentDirectoryW(dirPath.c_str());
+        }
+    }
+
     s_instance->WriteReportIntoFile(path, fileName, "ServiceMain Start");
 
     s_instance->m_serviceStatusHandle = RegisterServiceCtrlHandler(s_instance->m_serviceName, ServiceCtrlHandler);

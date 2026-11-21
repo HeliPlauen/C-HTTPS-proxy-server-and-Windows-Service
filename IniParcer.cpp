@@ -84,14 +84,17 @@ std::pair<std::string, int> IniParcer::Run() {
     std::map<std::string, std::string> config = this->ReadIniFile(this->strPathToIniFile);
 
     try {
-        port = config["Main.access_port"];
-        if (port == "") {
-            throw std::runtime_error("Data was not gotten!");
+        url = config[".target_url"];
+        if (url == "") {
+            throw std::runtime_error("Data was not gotten-1!");
         }
+        
+        port = config[".access_port"];
+        if (port == "") {
+            throw std::runtime_error("Data was not gotten-2!");
+        }   
 
-        url = config["Main.target_url"];
         intPort = this->ConvertPortIntoInt(port);
-
         return { url, intPort };
     }
     catch (std::runtime_error& ex1) {
