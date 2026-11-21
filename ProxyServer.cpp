@@ -1,6 +1,8 @@
 ﻿#include "ProxyServer.h"
 #include "IniParcer.h"
 
+#include <typeinfo>
+
 
 // Define them here !!!
 const char* pathHTTPS = "SERVER_PORT_8200";
@@ -10,6 +12,17 @@ const char* fileErrNameHTTPS = "ERR_REPORT_HTTPS.txt";
 
 ProxyServer::ProxyServer() {
     std::cout << "CONSTRUCTOR PROXY-SERVER-1" << std::endl;
+
+    // Set current dir !!!
+    wchar_t exePath[MAX_PATH];
+    if (GetModuleFileNameW(NULL, exePath, MAX_PATH) > 0) {
+        std::wstring dirPath(exePath);
+        size_t lastSlash = dirPath.find_last_of(L"\\/");
+        if (lastSlash != std::wstring::npos) {
+            dirPath = dirPath.substr(0, lastSlash);
+            SetCurrentDirectoryW(dirPath.c_str());
+        }
+    }
 
     IniParcer parcer = IniParcer(this->iniFilePath);
     auto data = parcer.Run();
@@ -27,6 +40,17 @@ ProxyServer::ProxyServer() {
 
 ProxyServer::ProxyServer(int proxyServerPort, int targetServerPort, std::string targetServerUrl) {
     std::cout << "CONSTRUCTOR PROXY-SERVER-2" << std::endl;
+
+    // Set current dir !!!
+    wchar_t exePath[MAX_PATH];
+    if (GetModuleFileNameW(NULL, exePath, MAX_PATH) > 0) {
+        std::wstring dirPath(exePath);
+        size_t lastSlash = dirPath.find_last_of(L"\\/");
+        if (lastSlash != std::wstring::npos) {
+            dirPath = dirPath.substr(0, lastSlash);
+            SetCurrentDirectoryW(dirPath.c_str());
+        }
+    }
         
     this->targetServerPort = targetServerPort;
     this->targetServerHost = targetServerUrl;
@@ -51,9 +75,12 @@ std::string ProxyServer::strSendGetRequest(SOCKET targetSocket, const std::strin
     std::string mess;
 
     httpRequest =
-        method + " " + this->targetServerHost + ":" + std::to_string(this->targetServerPort) + "/ HTTP/1.1\r\n"
-        "Host: " + this->targetServerHost + "\r\n"
-        "Content-Type: application/x-www-form-urlencoded\r\n\r\n";
+        httpRequest =
+        method + " " + path + " HTTP/1.1\r\n"
+        "Host: " + this->targetServerHost + ":" + std::to_string(this->targetServerPort) + "\r\n"        
+        //"Content-Type: application/x-www-form-urlencoded\r\n\r\n"
+        "Content-Type: text/html\r\n"
+        "Connection: close\r\n\r\n";
 
     this->WriteReportIntoFile(pathHTTPS, fileNameHTTPS, httpRequest.c_str());
 
@@ -84,11 +111,12 @@ std::string ProxyServer::strSendPostRequest(SOCKET targetSocket, const std::stri
     std::string mess;
 
     httpRequest =
-        method + " " + this->targetServerHost + ":" + std::to_string(this->targetServerPort) + "/ HTTP/1.1\r\n"
-        "Host: " + this->targetServerHost + "\r\n"
+        method + " " + path + " HTTP/1.1\r\n"
+        "Host: " + this->targetServerHost + ":" + std::to_string(this->targetServerPort) + "\r\n"
         "Content-Type: text/html\r\n"
         "Content-Length: " + std::to_string(static_cast<int>(body.length())) + "\r\n"
-        "\r\n" + body;
+        "\r\n" + body + 
+        "Connection: close\r\n\r\n";
 
     send(targetSocket, httpRequest.c_str(), static_cast<int>(httpRequest.length()), 0);
 
@@ -117,11 +145,12 @@ std::string ProxyServer::strSendPutRequest(SOCKET targetSocket, const std::strin
     std::string mess;
 
     httpRequest =
-        method + " " + this->targetServerHost + ":" + std::to_string(this->targetServerPort) + "/ HTTP/1.1\r\n"
-        "Host: " + this->targetServerHost + "\r\n"
+        method + " " + path + " HTTP/1.1\r\n"
+        "Host: " + this->targetServerHost + ":" + std::to_string(this->targetServerPort) + "\r\n"
         "Content-Type: text/html\r\n"
         "Content-Length: " + std::to_string(static_cast<int>(body.length())) + "\r\n"
-        "\r\n" + body;
+        "\r\n" + body +
+        "Connection: close\r\n\r\n";
 
     send(targetSocket, httpRequest.c_str(), static_cast<int>(httpRequest.length()), 0);
 
@@ -148,7 +177,8 @@ std::string ProxyServer::strForwardRequestToTargetServer(const std::string& meth
     struct sockaddr_in targetAddr;
     std::string httpResponse;
 
-    this->WriteReportIntoFile(pathHTTPS, fileNameHTTPS, "HERE-4");
+    int res = 0;
+    std::string err_mess;
 
     // Create a socket to connect to the target server
     if ((targetSocket = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
@@ -164,10 +194,36 @@ std::string ProxyServer::strForwardRequestToTargetServer(const std::string& meth
     const char* url = this->targetServerHost.c_str();
     inet_pton(AF_INET, url, &targetAddr.sin_addr);
 
+    // 1. Створюємо клієнтський SSL-контекст (можна зробити один раз при старті проксі)
+    SSL_CTX* clientCtx = SSL_CTX_new(TLS_client_method());
+    SSL_CTX_set_verify(clientCtx, SSL_VERIFY_NONE, nullptr); // Ігноруємо самопідписаний сертифікат сервера
+
+    // 2. Підключаємо SSL до вже відкритого сокета targetSocket
+    SSL* targetSsl = SSL_new(clientCtx);
+    SSL_set_fd(targetSsl, static_cast<int>(targetSocket));
+
+    if (SSL_connect(targetSsl) <= 0) {
+
+        // Помилка TLS handshake із сервером 8888
+        ERR_print_errors_fp(stderr);
+        SSL_free(targetSsl);
+        SSL_CTX_free(clientCtx);
+
+        closesocket(targetSocket);
+        return "";
+    }
+
     // !!!
     // Connect to the target server
-    if (connect(targetSocket, (struct sockaddr*)&targetAddr, sizeof(targetAddr)) < 0) {
-        std::string err_mess = "Connection to target server failed: " + std::to_string(WSAGetLastError());
+    res = connect(targetSocket, (struct sockaddr*)&targetAddr, sizeof(targetAddr));
+    if (res < 0) {
+        err_mess = "Connection to target server failed: " + std::to_string(WSAGetLastError());
+        this->WriteReportIntoFile(pathHTTPS, fileErrNameHTTPS, err_mess.c_str());
+
+        err_mess = "[" + this->targetServerHost + "]";
+        this->WriteReportIntoFile(pathHTTPS, fileErrNameHTTPS, err_mess.c_str());
+
+        err_mess = "[" + std::to_string(this->targetServerPort) + " " + typeid(this->targetServerPort).name() + "]";
         this->WriteReportIntoFile(pathHTTPS, fileErrNameHTTPS, err_mess.c_str());
 
         closesocket(targetSocket);
@@ -437,7 +493,7 @@ int ProxyServer::iRun() {
     mess = "HTTPS PROXY SERVER IS LISTENING ON A PORT: " + std::to_string(this->proxyServerPort) + this->GetCurrentDateTime();
     this->WriteReportIntoFile(pathHTTPS, fileNameHTTPS, mess.c_str());
 
-    mess = "HTTP TARGET SERVER HAS A PORT: " + std::to_string(this->proxyServerPort) + this->GetCurrentDateTime();
+    mess = "HTTP TARGET SERVER HAS A PORT: " + std::to_string(this->targetServerPort) + this->GetCurrentDateTime();
     this->WriteReportIntoFile(pathHTTPS, fileNameHTTPS, mess.c_str());
 
     // Step 7: Accept and process incoming connections
@@ -457,7 +513,7 @@ int ProxyServer::iRun() {
             ERR_print_errors_fp(stderr);
         }
         else {
-            vProcessHttpsRequest(ssl);
+            this->vProcessHttpsRequest(ssl);
         }
 
         SSL_shutdown(ssl);
