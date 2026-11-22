@@ -33,13 +33,16 @@ Navigate to the directory containing the executable (`cd <proxy_server_dir_path>
 ```cmd
 :: Install the service
 WinServiceHttpsPROXYserver.exe install
-
+```
+```cmd
 :: Start the service
 WinServiceHttpsPROXYserver.exe start
-
+```
+```cmd
 :: Stop the service
 WinServiceHttpsPROXYserver.exe stop
-
+```
+```cmd
 :: Uninstall the service
 WinServiceHttpsPROXYserver.exe uninstall
 ```
@@ -49,13 +52,16 @@ WinServiceHttpsPROXYserver.exe uninstall
 ```cmd
 :: Install (replace with the actual full path to the executable)
 sc create WinServ binPath= "C:\(\full\path\to\WinServiceHttpsPROXYserver.\)exe"
-
+```
+```cmd
 :: Start
 sc start WinServ
-
+```
+```cmd
 :: Stop
 sc stop WinServ
-
+```
+```cmd
 :: Delete
 sc delete WinServ
 ```
